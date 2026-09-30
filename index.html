@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAGE: Subspace-Targeted Affine Generative Erasure for Text-to-3D Models</title>
+<meta name="description" content="STAGE is a training-free, closed-form method for erasing concepts from native text-to-3D generators, applied stage by stage in TRELLIS.">
+<meta property="og:title" content="STAGE: Subspace-Targeted Affine Generative Erasure for Text-to-3D Models">
+<meta property="og:description" content="Training-free, stage-aware concept erasure for native text-to-3D generation.">
+<meta property="og:image" content="assets/teaser.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --ground: #ffffff;
+    --panel: #f5f4f8;
+    --ink: #1f1d2b;
+    --muted: #5e5a6e;
+    --rule: #e3e1ea;
+    --violet: #5a4b8f;   /* structural stage G_S, as in the paper figures */
+    --violet-soft: #ebe7f5;
+    --brown: #74503f;    /* appearance stage G_L */
+    --brown-soft: #f2e9e3;
+    --green: #2f7a4f;
+    --green-soft: #e4f1e8;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; }
+  .narrow { max-width: 760px; margin: 0 auto; }
+  img { max-width: 100%; height: auto; display: block; }
+  a { color: var(--violet); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; border-radius: 6px; }
+
+  /* Header */
+  header { padding-block: 64px 36px; text-align: center; }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(30px, 4.6vw, 46px); line-height: 1.15; margin: 0; text-wrap: balance; }
+  h1 .acr { color: var(--violet); }
+  .subtitle { font-family: var(--serif); font-size: clamp(19px, 2.4vw, 24px); color: var(--muted); margin: 10px 0 26px; text-wrap: balance; }
+  .authors { font-size: 19px; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; }
+  .affil { color: var(--muted); margin: 6px 0 26px; }
+  .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 18px; border-radius: 999px;
+    background: var(--ink); color: #fff; text-decoration: none;
+    font-weight: 600; font-size: 15px;
+  }
+  .btn:hover { background: var(--violet); }
+  .btn svg { width: 17px; height: 17px; fill: currentColor; }
+  .btn.soon { background: var(--panel); color: var(--muted); cursor: default; }
+
+  /* Sections */
+  section { padding-block: 34px; }
+  h2 { font-family: var(--serif); font-weight: 600; font-size: 29px; margin: 0 0 18px; text-align: center; }
+  h3 { font-family: var(--serif); font-weight: 600; font-size: 21px; margin: 32px 0 10px; }
+  p { margin: 0 0 14px; }
+  .abstract p { text-align: justify; hyphens: auto; }
+  figure { margin: 0; }
+  figcaption { font-size: 15px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+  figcaption b { color: var(--ink); }
+  .teaser { margin-top: 8px; }
+
+  /* Method */
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; margin: 26px 0 8px; }
+  .step { background: var(--panel); border-radius: 12px; padding: 18px 20px; }
+  .step .num { font-family: var(--serif); font-weight: 700; color: var(--violet); font-size: 15px; letter-spacing: 0.04em; }
+  .step h4 { margin: 4px 0 6px; font-size: 17px; }
+  .step p { margin: 0; font-size: 15.5px; color: var(--muted); }
+  .formula { font-family: var(--serif); font-size: 19px; text-align: center; margin: 22px 0; color: var(--ink); }
+  .modes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 6px 0 20px; }
+  .mode { border-radius: 999px; padding: 5px 14px; font-size: 15px; font-weight: 600; }
+  .mode.s { background: var(--violet-soft); color: var(--violet); }
+  .mode.l { background: var(--brown-soft); color: var(--brown); }
+  .mode.sl { background: linear-gradient(90deg, var(--violet-soft), var(--brown-soft)); color: var(--ink); }
+
+  /* Results table */
+  .table-scroll { overflow-x: auto; margin: 10px 0 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; font-size: 15.5px; }
+  th, td { padding: 8px 10px; text-align: center; }
+  thead th { font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--rule); }
+  thead tr:first-child th { color: var(--ink); font-family: var(--serif); font-size: 16.5px; }
+  thead tr:first-child th.group { border-bottom: 2px solid var(--rule); }
+  td:first-child, th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--rule); }
+  tbody tr.ours { background: var(--violet-soft); }
+  tbody tr.ours td:first-child { color: var(--violet); font-weight: 700; }
+  td.best { font-weight: 700; }
+  td.overall { font-weight: 600; }
+  .note { font-size: 14.5px; color: var(--muted); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+
+  /* Gallery */
+  .tabs { display: flex; justify-content: center; gap: 8px; margin: 4px 0 22px; flex-wrap: wrap; }
+  .tab {
+    font: inherit; font-weight: 600; font-size: 15px;
+    border: 1px solid var(--rule); background: var(--ground); color: var(--muted);
+    padding: 7px 18px; border-radius: 999px; cursor: pointer;
+  }
+  .tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .strips { display: grid; gap: 26px; }
+  .strip figcaption { margin-top: 6px; }
+
+  /* BibTeX */
+  .bib { position: relative; background: var(--panel); border-radius: 12px; padding: 18px 20px; overflow-x: auto; }
+  .bib pre { margin: 0; font-family: var(--mono); font-size: 14px; line-height: 1.55; white-space: pre; }
+  .copy {
+    position: absolute; top: 12px; right: 12px;
+    font: inherit; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--rule); background: var(--ground); color: var(--muted);
+    padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  }
+
+  footer { padding-block: 36px 48px; text-align: center; font-size: 14px; color: var(--muted); border-top: 1px solid var(--rule); margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <h1><span class="acr">STAGE</span>: Subspace-Targeted Affine Generative Erasure</h1>
+  <p class="subtitle">for Text-to-3D Models</p>
+  <p class="authors"><span>Karol Dziekan</span><span>Przemysław Spurek</span><span>Dawid Malarz</span></p>
+  <p class="affil">Faculty of Mathematics and Computer Science, Jagiellonian University, Kraków</p>
+  <div class="links">
+    <span class="btn soon" title="The arXiv version will be linked here">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V9h5.5L13 3.5zM8 13h8v1.6H8V13zm0 3.4h8V18H8v-1.6z"/></svg>
+      Paper (coming soon)
+    </span>
+    <a class="btn" href="https://github.com/gmum/STAGE">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+      Code
+    </a>
+  </div>
+</header>
+
+<section class="wrap" style="padding-top: 0">
+  <figure class="teaser">
+    <img src="assets/teaser.jpg" width="2000" height="831" alt="Left: TRELLIS generates a voxel structure in stage G_S and fills it with material and fine geometry in stage G_L. Right: a table under the three edit modes; editing G_S changes its shape, editing G_L changes its material.">
+    <figcaption><b>Concepts localize to different stages of TRELLIS.</b> TRELLIS first fixes the voxel scaffold in a structural stage G<sub>S</sub> and then fills it with material, color and fine geometry in a latent stage G<sub>L</sub>. Editing only G<sub>S</sub> (Mode-S) changes shape but not material, editing only G<sub>L</sub> (Mode-L) changes material but not shape, and object identity needs both stages (Mode-SL).</figcaption>
+  </figure>
+</section>
+
+<section class="wrap abstract" id="abstract">
+  <h2>Abstract</h2>
+  <div class="narrow">
+    <p>Concept erasure suppresses a target concept while preserving behavior on unrelated inputs. Existing closed-form methods were designed for 2D image diffusion and assume a single generative pathway, so one edit must cover geometry and texture at once. Native 3D generators, which synthesize structured 3D representations directly rather than by lifting 2D samples, violate this assumption. We show that shape and object concepts must be erased in the structural stage of the pipeline and material concepts in the appearance stage. We therefore formulate erasure in native text-to-3D as a stage-aware editing problem and introduce <b>STAGE</b>, a training-free, closed-form framework. STAGE confines each edit to the low-dimensional subspace spanned by the differences between erase and anchor embeddings, and relaxes the norm-preserving (orthogonal) constraint of prior editors into a least-squares affine correction that maps target activations onto safe anchors subject to a penalty on the displacement of retained prompts. The correction applies to the structural stage, the appearance stage, or both. We find that the stage an edit must reach is determined by concept type. On TRELLIS, the standard open native 3D generator, across 15 shape, material, and object concepts, STAGE reaches 66.7 on a composite score that balances forgetting the target concept against preserving everything else, aggregating CLIP-based semantic and physical metrics, versus 53.2 for the strongest adapted baseline.</p>
+  </div>
+</section>
+
+<section class="wrap" id="method">
+  <h2>Method</h2>
+  <figure>
+    <img src="assets/pipeline.png" width="2000" height="750" alt="The STAGE pipeline: paired erase and anchor prompts are encoded, their differences span a contrast subspace, and a closed-form edit of the cross-attention key and value projections is folded into the structural stage, the appearance stage, or both.">
+    <figcaption><b>STAGE folded into TRELLIS.</b> STAGE encodes paired prompts, builds the contrast subspace from the differences between erase and anchor embeddings, and solves the closed-form correction in one step. The resulting weights replace W<sub>K</sub> and W<sub>V</sub> in the cross-attention of G<sub>S</sub>, G<sub>L</sub>, or both, with no retraining.</figcaption>
+  </figure>
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">01</div>
+      <h4>Contrast subspace</h4>
+      <p>Erase and anchor prompts differ only in the concept word. The leading singular directions of their token-level differences span the subspace the edit may act in.</p>
+    </div>
+    <div class="step">
+      <div class="num">02</div>
+      <h4>Affine correction</h4>
+      <p>A least-squares affine map moves erase embeddings onto their anchors, while anchors, the null prompt and other retained prompts stay in place.</p>
+    </div>
+    <div class="step">
+      <div class="num">03</div>
+      <h4>Stage-aware folding</h4>
+      <p>The correction is folded exactly into the cross-attention of the stage the concept lives in, in seconds and without training.</p>
+    </div>
+  </div>
+
+  <p class="formula">T(c) = c + N(D<sup>⊤</sup>c) + n<sub>0</sub> &nbsp;&nbsp;⟶&nbsp;&nbsp; W′ = W + (WN)D<sup>⊤</sup>, &nbsp; b′ = b + Wn<sub>0</sub></p>
+  <div class="modes" aria-label="Edit modes">
+    <span class="mode s">Mode-S · shapes</span>
+    <span class="mode l">Mode-L · materials</span>
+    <span class="mode sl">Mode-SL · objects</span>
+  </div>
+
+  <figure>
+    <img src="assets/intuition.png" width="1600" height="642" loading="lazy" alt="Three editing primitives: an unconstrained least-squares update moves unrelated prompts, a rotation must move the anchor to reach it, and the STAGE correction acts only along the erase direction.">
+    <figcaption><b>Why an affine correction.</b> A least-squares update of the whole projection (UCE) is not confined to a subspace, so unrelated prompts drift. A rotation (OCE) preserves distances, so it cannot move the target onto the anchor without moving the anchor too. STAGE acts only along the erase direction and keeps anchors and retained prompts in place.</figcaption>
+  </figure>
+</section>
+
+<section class="wrap" id="results">
+  <h2>Results</h2>
+  <p class="narrow">We evaluate on 15 concepts of TRELLIS, five shapes, five materials and five objects, with the 3D Unlearning Score (3D-US), which combines forgetting (F) of the erased concept and preservation (P) of all other concepts, measured with CLIP on renders and with Uni3D on point clouds or a material classifier. All methods edit the same stages.</p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2">Method</th>
+          <th colspan="3" class="group">Shape</th>
+          <th colspan="3" class="group">Material</th>
+          <th colspan="3" class="group">Object</th>
+          <th class="group">Overall</th>
+        </tr>
+        <tr>
+          <th>F</th><th>P</th><th>3D-US</th>
+          <th>F</th><th>P</th><th>3D-US</th>
+          <th>F</th><th>P</th><th>3D-US</th>
+          <th>3D-US</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UCE</td>
+          <td>0.61</td><td>0.85</td><td>66.9</td>
+          <td>0.22</td><td>0.84</td><td>30.8</td>
+          <td>0.57</td><td class="best">0.65</td><td>51.9</td>
+          <td class="overall">47.5</td>
+        </tr>
+        <tr>
+          <td>OCE</td>
+          <td class="best">0.73</td><td>0.67</td><td>67.9</td>
+          <td>0.36</td><td>0.74</td><td>41.8</td>
+          <td>0.83</td><td>0.41</td><td>53.2</td>
+          <td class="overall">53.2</td>
+        </tr>
+        <tr class="ours">
+          <td>STAGE</td>
+          <td>0.70</td><td class="best">0.91</td><td class="best">77.7</td>
+          <td class="best">0.45</td><td class="best">0.92</td><td class="best">56.4</td>
+          <td class="best">0.90</td><td>0.61</td><td class="best">67.7</td>
+          <td class="overall best">66.7</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">F and P lie in [0, 1], 3D-US in [0, 100], higher is better. Axis values are means over the five concepts of the axis, and Overall is the geometric mean of the three axes.</p>
+
+  <h3>Qualitative comparison</h3>
+  <figure>
+    <img src="assets/qualitative.jpg" width="1500" height="977" loading="lazy" alt="One concept per axis erased by UCE, OCE and STAGE on the same prompt and seed: cube to sphere, stone to wood, table to car.">
+    <figcaption><b>One concept per axis.</b> Shape (cubic → round), material (stone → wood) and object (table → car), all methods on the same prompt and seed.</figcaption>
+  </figure>
+
+  <h3>Redirection across seeds</h3>
+  <figure>
+    <img src="assets/seeds.jpg" width="1600" height="946" loading="lazy" alt="A chair prompt erased toward teddy bear with seven random seeds per method: STAGE produces a teddy bear every time.">
+    <figcaption><b>Chair → teddy bear under seven random seeds.</b> STAGE yields a teddy bear under every seed, while UCE and OCE mostly produce distorted or unrelated objects.</figcaption>
+  </figure>
+
+  <div class="two" style="margin-top: 30px">
+    <figure>
+      <img src="assets/tradeoff.png" width="1100" height="762" loading="lazy" alt="Mean forgetting against mean preservation for every configuration of the three hyperparameter sweeps; the STAGE configurations lie above those of both baselines.">
+    </figure>
+    <div>
+      <h3 style="margin-top: 0">Forgetting and preservation</h3>
+      <p>Every configuration of the hyperparameter sweeps of the three methods, placed by its mean forgetting and preservation. The STAGE configurations form a front above both baselines, and even at its default hyperparameters STAGE scores above both tuned baselines (60.1 vs 53.2).</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="gallery">
+  <h2>Gallery</h2>
+  <p class="narrow" style="text-align: center">Twelve evaluation prompts per concept, each with its fixed seed: the unedited model and the result of UCE, OCE and STAGE.</p>
+  <div class="tabs" role="tablist" aria-label="Concept axis">
+    <button class="tab" role="tab" id="tab-shape" aria-controls="panel-shape" aria-selected="true">Shape</button>
+    <button class="tab" role="tab" id="tab-material" aria-controls="panel-material" aria-selected="false">Material</button>
+    <button class="tab" role="tab" id="tab-object" aria-controls="panel-object" aria-selected="false">Object</button>
+  </div>
+
+  <div class="strips" role="tabpanel" id="panel-shape" aria-labelledby="tab-shape">
+    <figure class="strip"><img src="assets/gallery/shape_cubic_square.jpg" width="1800" height="584" loading="lazy" alt="Erasing cube toward sphere"></figure>
+    <figure class="strip"><img src="assets/gallery/shape_round_circular.jpg" width="1800" height="584" loading="lazy" alt="Erasing sphere toward cylinder"></figure>
+    <figure class="strip"><img src="assets/gallery/shape_cylinder.jpg" width="1800" height="584" loading="lazy" alt="Erasing cylinder toward torus"></figure>
+    <figure class="strip"><img src="assets/gallery/shape_ring_torus.jpg" width="1800" height="584" loading="lazy" alt="Erasing torus toward cylinder"></figure>
+    <figure class="strip"><img src="assets/gallery/shape_cellular_latice.jpg" width="1800" height="584" loading="lazy" alt="Erasing cellular lattice toward torus"></figure>
+  </div>
+  <div class="strips" role="tabpanel" id="panel-material" aria-labelledby="tab-material" hidden>
+    <figure class="strip"><img src="assets/gallery/material_wood.jpg" width="1800" height="584" loading="lazy" alt="Erasing wood toward metal"></figure>
+    <figure class="strip"><img src="assets/gallery/material_metal.jpg" width="1800" height="584" loading="lazy" alt="Erasing metal toward wood"></figure>
+    <figure class="strip"><img src="assets/gallery/material_glass.jpg" width="1800" height="584" loading="lazy" alt="Erasing glass toward ceramic"></figure>
+    <figure class="strip"><img src="assets/gallery/material_stone.jpg" width="1800" height="584" loading="lazy" alt="Erasing stone toward ceramic"></figure>
+    <figure class="strip"><img src="assets/gallery/material_ceramic.jpg" width="1800" height="584" loading="lazy" alt="Erasing ceramic toward glass"></figure>
+  </div>
+  <div class="strips" role="tabpanel" id="panel-object" aria-labelledby="tab-object" hidden>
+    <figure class="strip"><img src="assets/gallery/object_car.jpg" width="1800" height="584" loading="lazy" alt="Erasing car toward cat"></figure>
+    <figure class="strip"><img src="assets/gallery/object_cat.jpg" width="1800" height="584" loading="lazy" alt="Erasing cat toward chair"></figure>
+    <figure class="strip"><img src="assets/gallery/object_chair.jpg" width="1800" height="584" loading="lazy" alt="Erasing chair toward teddy bear"></figure>
+    <figure class="strip"><img src="assets/gallery/object_table.jpg" width="1800" height="584" loading="lazy" alt="Erasing table toward car"></figure>
+    <figure class="strip"><img src="assets/gallery/object_teddy_bear.jpg" width="1800" height="584" loading="lazy" alt="Erasing teddy bear toward table"></figure>
+  </div>
+</section>
+
+<section class="wrap" id="bibtex">
+  <h2>BibTeX</h2>
+  <div class="bib narrow">
+    <button class="copy" id="copy-bib" type="button">Copy</button>
+<pre id="bib-text">@misc{dziekan2026stage,
+  title  = {{STAGE}: Subspace-Targeted Affine Generative Erasure for Text-to-3D Models},
+  author = {Dziekan, Karol and Spurek, Przemys{\l}aw and Malarz, Dawid},
+  year   = {2026}
+}</pre>
+  </div>
+</section>
+
+<footer class="wrap">
+  <a href="https://gmum.net">GMUM</a> · Jagiellonian University
+</footer>
+
+<script>
+  const tabs = [...document.querySelectorAll('.tab')];
+  tabs.forEach(tab => tab.addEventListener('click', () => {
+    tabs.forEach(t => {
+      const selected = t === tab;
+      t.setAttribute('aria-selected', String(selected));
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
+    });
+  }));
+  document.getElementById('copy-bib').addEventListener('click', async (e) => {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('bib-text').textContent);
+      e.target.textContent = 'Copied';
+    } catch {
+      e.target.textContent = 'Select and copy';
+    }
+    setTimeout(() => { e.target.textContent = 'Copy'; }, 1800);
+  });
+</script>
+</body>
+</html>
