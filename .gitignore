@@ -1,0 +1,24 @@
+# Experiment outputs and SLURM logs
+results/
+logs/
+
+# Local cluster settings (see scripts/slurm/cluster.env.example)
+scripts/slurm/cluster.env
+
+# K0 and other tensors (data/K0_trellis_nopad.pt is rebuilt by unlearning_methods/k0/)
+*.pt
+
+# Local working directories
+Papers/
+Blender/
+glbs/
+glbs_zip/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
