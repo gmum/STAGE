@@ -52,7 +52,11 @@
   h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(30px, 4.6vw, 46px); line-height: 1.15; margin: 0; text-wrap: balance; }
   h1 .acr { color: var(--violet); }
   .subtitle { font-family: var(--serif); font-size: clamp(19px, 2.4vw, 24px); color: var(--muted); margin: 10px 0 26px; text-wrap: balance; }
-  .authors { font-size: 19px; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; }
+  .authors { font-size: 19px; margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; }
+  .authors a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--rule); }
+  .authors a:hover { color: var(--violet); border-color: var(--violet); }
+  .authors sup { margin-left: 2px; margin-right: 14px; color: var(--muted); }
+  .authors sup:last-child { margin-right: 0; }
   .affil { color: var(--muted); margin: 6px 0 26px; }
   .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
   .btn {
@@ -136,8 +140,8 @@
 <header class="wrap">
   <h1><span class="acr">STAGE</span>: Subspace-Targeted Affine Generative Erasure</h1>
   <p class="subtitle">for Text-to-3D Models</p>
-  <p class="authors"><span>Karol Dziekan</span><span>Przemysław Spurek</span><span>Dawid Malarz</span></p>
-  <p class="affil">Faculty of Mathematics and Computer Science, Jagiellonian University, Kraków</p>
+  <p class="authors"><a href="https://github.com/Dariooo23">Karol Dziekan</a><sup>1</sup><a href="https://scholar.google.com/citations?hl=en&amp;user=0kp0MbgAAAAJ">Przemysław Spurek</a><sup>1,2</sup><a href="https://github.com/MalarzDawid">Dawid Malarz</a><sup>1,2</sup></p>
+  <p class="affil"><sup>1</sup> Jagiellonian University &nbsp;&nbsp; <sup>2</sup> IDEAS Research Institute</p>
   <div class="links">
     <span class="btn soon" title="The arXiv version will be linked here">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V9h5.5L13 3.5zM8 13h8v1.6H8V13zm0 3.4h8V18H8v-1.6z"/></svg>
